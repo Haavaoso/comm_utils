@@ -3,7 +3,23 @@ project(comm_utils)
 
 set(CMAKE_CXX_STANDARD 20)
 
-# Include third-party dependencies if needed
+
+
+# Disable Boost warning
+set(Boost_NO_WARN_NEW_VERSIONS 1)
+
+if (MSVC)
+    # Boost asio wants this...
+    add_compile_definitions("_WIN32_WINNT=0x0601")
+endif ()
+
+find_package(Boost REQUIRED COMPONENTS system)
+
+
+
+
+
+
 include(FetchContent)
 FetchContent_Declare(
         SimpleSocket
@@ -24,13 +40,21 @@ add_executable(tcp_client_test tests/tcp_client_test.cpp)
 
 add_executable(tcp_server_test tests/tcp_server_test.cpp
         src/image_stream.cpp)
-add_executable(websocket_server_test tests/websocket_server_test.cpp)
+
+
 
 
 target_link_libraries(image_stream_test PRIVATE ${OpenCV_LIBS})
 target_link_libraries(tcp_client_test PRIVATE ${OpenCV_LIBS} simple_socket)
 target_link_libraries(tcp_server_test PRIVATE ${OpenCV_LIBS} simple_socket)
-target_link_libraries(websocket_server_test PRIVATE ${OpenCV_LIBS} simple_socket)
 
 
 add_subdirectory(tests PRIVATE)
+
+
+# Specify the images directory to be copied
+set(IMAGES_SOURCE_DIR "${CMAKE_SOURCE_DIR}/images")
+set(IMAGES_DEST_DIR "${CMAKE_BINARY_DIR}/images")
+
+# Copy images folder to the build directory
+file(COPY ${IMAGES_SOURCE_DIR} DESTINATION ${CMAKE_BINARY_DIR})

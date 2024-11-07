@@ -100,13 +100,22 @@ private:
             sendData(connection, encodedImage);
             std::cout << "Sent message." << std::endl;
 
+
+
             auto clientData = receiveData(connection);
-            cv::Mat clientImage = uChar2cvMat(clientData);
+            if (clientData.empty()) {
+                std::cout << "No dataaa." << std::endl;
+                break;
+            } try {
+                cv::Mat clientImage = uChar2cvMat(clientData);
             {
                 std::lock_guard<std::mutex> lock(imageMutex);
                 receivedImage = clientImage.clone();
                 std::cout << "Recieved message back." << std::endl;
-
+            }
+            } catch (const cv::Exception& e) {
+                std::cerr << "Error decoding image: " << e.what() << std::endl;
+                break;
             }
         }
     }
