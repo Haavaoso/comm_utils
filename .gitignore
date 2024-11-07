@@ -1,32 +1,92 @@
-# Prerequisites
-*.d
+# Ignore build directories
+build/
+cmake-build-*/
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
+# Ignore CMake-generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+install_manifest.txt
 
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
+# Ignore executables
 *.exe
 *.out
 *.app
+
+# Ignore object files and libraries
+*.o
+*.obj
+*.so
+*.dll
+*.dylib
+*.a
+*.lib
+
+# Ignore temporary or backup files
+*.swp
+*.swo
+*.tmp
+*.bak
+*.log
+
+# Ignore OS-specific files
+.DS_Store               # macOS
+Thumbs.db               # Windows
+Desktop.ini             # Windows
+
+# Ignore IDE-specific files
+.idea/                  # CLion and other JetBrains IDEs
+*.iml                   # JetBrains IDEs module files
+.vscode/                # Visual Studio Code
+*.code-workspace
+
+# Ignore dependency directories (if using FetchContent or submodules)
+third_party/SimpleSocket/build/
+third_party/SimpleSocket/.git/
+third_party/SimpleSocket/CMakeFiles/
+third_party/SimpleSocket/CMakeCache.txt
+third_party/SimpleSocket/cmake_install.cmake
+third_party/SimpleSocket/install_manifest.txt
+
+# Ignore test outputs and coverage reports
+tests/output/
+tests/*.gcda
+tests/*.gcno
+tests/*.gcov
+coverage/
+
+# Ignore OpenCV temporary files
+opencv_cache/
+opencv_build/
+
+# Ignore generated documentation files
+docs/
+doxygen/
+
+# Ignore temporary files created by editors
+*~
+*.orig
+*.rej
+
+# Ignore binary files
+*.bin
+
+# Ignore Python cache (if you have any Python scripts for utilities or testing)
+__pycache__/
+*.py[cod]
+
+# Ignore logs and reports
+*.log
+*.xml
+*.json
+
+# Ignore other irrelevant folders
+logs/
+.temp/
+
+# Specific ignore rules for your repo
+src/*/CMakeFiles/
+src/*/CMakeCache.txt
+src/*/cmake_install.cmake
+src/*/*.o
