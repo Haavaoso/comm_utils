@@ -4,109 +4,88 @@
 #ifndef WEBSOCKET_SERVER_HPP
 #define WEBSOCKET_SERVER_HPP
 
-#include "simple_socket/WebSocket.hpp"
-#include <opencv2/opencv.hpp>
-#include <string>
-#include <vector>
 #include <iostream>
+#include <opencv2/opencv.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/beast/core.hpp>
+#include <boost/beast/websocket.hpp>
 #include <thread>
 #include <chrono>
+
+namespace beast = boost::beast;
+namespace ip = boost::asio::ip;
+using tcp = boost::asio::ip::tcp;
 
 class WebSocketServer {
 public:
     WebSocketServer(const std::string& host, uint16_t port)
-        : websocketClient(), host_(host), port_(port), connected_(false) {
+        : host_(host), port_(port) {}
 
-        // Set up WebSocket callbacks
-        websocketClient.onOpen = [this](simple_socket::WebSocketConnection* conn) {
-            if (conn) {
-                std::cout << "WebSocket connection opened: " << conn->uuid() << std::endl;
-                connected_ = true;
-            } else {
-                std::cerr << "Failed to open WebSocket connection" << std::endl;
-            }
-        };
-
-        websocketClient.onClose = [this](simple_socket::WebSocketConnection* conn) {
-            if (conn) {
-                std::cout << "WebSocket connection closed: " << conn->uuid() << std::endl;
-            }
-            connected_ = false;
-        };
-
-        websocketClient.onMessage = [](simple_socket::WebSocketConnection* conn, const std::string& msg) {
-            if (conn) {
-                std::cout << "Message received from server: " << msg << std::endl;
-            }
-        };
-
+    // Start streaming the video from the provided VideoCapture object
+    void startStream(cv::VideoCapture& videoStream) {
         try {
-            websocketClient.connect(host, port);
-        } catch (const std::exception& e) {
-            std::cerr << "Exception during WebSocket connect: " << e.what() << std::endl;
-        }
+            // Set up WebSocket server
+            auto const address = ip::make_address(host_);
+            boost::asio::io_context ioc{};
+            tcp::acceptor acceptor{ioc, {address, port_}};
+            tcp::socket socket{ioc};
 
-        waitForConnection();
-    }
+            acceptor.listen(1);
+            std::cout << "Listening for WebSocket connections on ws://" << host_ << ":" << port_ << std::endl;
 
-    // Method to convert and send cv::Mat over WebSocket
-    void sendMat(const cv::Mat& mat) {
-        if (!connected_) {
-            std::cerr << "WebSocket is not connected. Cannot send data." << std::endl;
-            return;
-        }
+            // Accept a WebSocket connection
+            acceptor.accept(socket);
+            beast::websocket::stream<beast::tcp_stream> ws{std::move(socket)};
+            ws.accept();
+            ws.binary(true);
 
-        if (mat.empty()) {
-            std::cerr << "Empty image. Nothing to send." << std::endl;
-            return;
-        }
-
-        try {
-            // Encode cv::Mat to JPEG format
-            std::vector<uchar> buffer;
-            cv::imencode(".jpg", mat, buffer);
-
-            // Convert encoded buffer to a string for transmission
-            std::string encodedData(buffer.begin(), buffer.end());
-
-            // Send the encoded image data through WebSocket
-            websocketClient.send(encodedData);
-        } catch (const std::exception& e) {
-            std::cerr << "Exception during sendMat: " << e.what() << std::endl;
-        }
-    }
-
-    // Close the WebSocket connection
-    void close() {
-        if (connected_) {
-            try {
-                websocketClient.close();
-                connected_ = false;
-            } catch (const std::exception& e) {
-                std::cerr << "Exception during close: " << e.what() << std::endl;
+            // Check if the video stream is opened
+            if (!videoStream.isOpened()) {
+                std::cerr << "Error: Video stream is not open." << std::endl;
+                return;
             }
+
+            // Streaming loop
+            while (true) {
+                cv::Mat frame;
+                videoStream >> frame;
+
+                if (frame.empty()) {
+                    std::cerr << "Error: Captured empty frame." << std::endl;
+                    break;
+                }
+
+                // Encode the frame as JPEG
+                std::vector<uchar> buffer;
+                if (!cv::imencode(".jpg", frame, buffer)) {
+                    std::cerr << "Error: Failed to encode frame." << std::endl;
+                    continue;
+                }
+
+                // Send the encoded frame over WebSocket
+                try {
+                    ws.write(boost::asio::buffer(buffer.data(), buffer.size()));
+                } catch (const beast::system_error& e) {
+                    std::cerr << "Error: WebSocket write failed - " << e.what() << std::endl;
+                    break;
+                }
+
+                // Control frame rate (e.g., ~30 FPS)
+                std::this_thread::sleep_for(std::chrono::milliseconds(33));
+            }
+
+            // Close WebSocket connection
+            ws.close(beast::websocket::close_code::normal);
+            std::cout << "WebSocket connection closed." << std::endl;
+
+        } catch (const std::exception& e) {
+            std::cerr << "Error: " << e.what() << '\n';
         }
     }
 
 private:
-    simple_socket::WebSocketClient websocketClient;
     std::string host_;
     uint16_t port_;
-    bool connected_;
-
-    // Helper method to wait for the WebSocket connection to establish
-    void waitForConnection() {
-        int retryCount = 0;
-        while (!connected_ && retryCount < 10) {
-            std::cout << "Waiting for WebSocket connection..." << std::endl;
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            retryCount++;
-        }
-
-        if (!connected_) {
-            std::cerr << "Failed to establish WebSocket connection." << std::endl;
-        }
-    }
 };
 
 #endif //WEBSOCKET_SERVER_HPP

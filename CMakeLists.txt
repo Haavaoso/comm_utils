@@ -43,6 +43,7 @@ add_executable(tcp_server_test tests/tcp_server_test.cpp
 
 
 
+target_link_libraries(main PRIVATE ${OpenCV_LIBS})
 
 target_link_libraries(image_stream_test PRIVATE ${OpenCV_LIBS})
 target_link_libraries(tcp_client_test PRIVATE ${OpenCV_LIBS} simple_socket)
